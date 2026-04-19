@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: Franquicia
+    name: franquicia-api
   r2dbc:
     url: r2dbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:franquicia_db}
     username: ${DB_USERNAME:admin}
@@ -11,19 +11,18 @@ spring:
   sql:
     init:
       mode: always
-      platform: mysql
-  aws:
-    endpoint:
-      url: ${AWS_ENDPOINT:}
-    region: ${AWS_REGION:us-east-1}
-    secrets:
-      name: ${AWS_SECRET_NAME:/accenture/dev/db-credentials}
-  
-  managment:
-    endpoints:
-      web:
-        exposure:
-          include: health,info
-    endpoint:
-      health:
-        show-details: always
+
+aws:
+  endpoint: ${AWS_ENDPOINT:}
+  region: ${AWS_REGION:us-east-1}
+  secrets:
+    name: ${AWS_SECRET_NAME:/accenture/dev/db-credentials}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
