@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: VPC para Franchise API
+Description: VPC para Franquicia API
 
 Parameters:
   Environment:
@@ -15,7 +15,7 @@ Resources:
       EnableDnsSupport: true
       Tags:
         - Key: Name
-          Value: !Sub franchise-vpc-${Environment}
+          Value: !Sub franquicia-vpc-${Environment}
 
   SubnetPublicA:
     Type: AWS::EC2::Subnet
@@ -92,24 +92,24 @@ Outputs:
   VpcId:
     Value: !Ref VPC
     Export:
-      Name: !Sub franchise-vpc-id-${Environment}
+      Name: !Sub franquicia-vpc-id-${Environment}
   SubnetPublicA:
     Value: !Ref SubnetPublicA
     Export:
-      Name: !Sub franchise-subnet-public-a-${Environment}
+      Name: !Sub franquicia-subnet-public-a-${Environment}
   SubnetPublicB:
     Value: !Ref SubnetPublicB
     Export:
-      Name: !Sub franchise-subnet-public-b-${Environment}
+      Name: !Sub franquicia-subnet-public-b-${Environment}
   SubnetPrivateA:
     Value: !Ref SubnetPrivateA
     Export:
-      Name: !Sub franchise-subnet-private-a-${Environment}
+      Name: !Sub franquicia-subnet-private-a-${Environment}
   SubnetPrivateB:
     Value: !Ref SubnetPrivateB
     Export:
-      Name: !Sub franchise-subnet-private-b-${Environment}
+      Name: !Sub franquicia-subnet-private-b-${Environment}
   RDSSubnetGroup:
     Value: !Ref RDSSubnetGroup
     Export:
-      Name: !Sub franchise-rds-subnet-group-${Environment}
+      Name: !Sub franquicia-rds-subnet-group-${Environment}
