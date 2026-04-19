@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ECR para Franchise API
+Description: ECR para Franquicia API
 
 Parameters:
   Environment:
@@ -7,10 +7,10 @@ Parameters:
     Default: dev
 
 Resources:
-  FranchiseECR:
+  FranquiciaECR:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: franchise-api
+      RepositoryName: franquicia-api
       ImageScanningConfiguration:
         ScanOnPush: true
       LifecyclePolicy:
@@ -30,6 +30,6 @@ Resources:
 
 Outputs:
   ECRRepositoryUri:
-    Value: !GetAtt FranchiseECR.RepositoryUri
+    Value: !GetAtt FranquiciaECR.RepositoryUri
     Export:
-      Name: !Sub franchise-ecr-uri-${Environment}
+      Name: !Sub franquicia-ecr-uri-${Environment}
