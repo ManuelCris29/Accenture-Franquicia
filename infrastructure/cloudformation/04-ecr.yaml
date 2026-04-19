@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECR para Franchise API
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  FranchiseECR:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: franchise-api
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [{
+              "rulePriority": 1,
+              "description": "Keep last 5 images",
+              "selection": {
+                "tagStatus": "any",
+                "countType": "imageCountMoreThan",
+                "countNumber": 5
+              },
+              "action": { "type": "expire" }
+            }]
+          }
+
+Outputs:
+  ECRRepositoryUri:
+    Value: !GetAtt FranchiseECR.RepositoryUri
+    Export:
+      Name: !Sub franchise-ecr-uri-${Environment}
