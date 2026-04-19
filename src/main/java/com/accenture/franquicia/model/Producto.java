@@ -19,6 +19,7 @@ public class Producto {
     @Id
     private Long id;
     private String name;
+    private Integer stock;
     private long sucursalId;
     private LocalDateTime created_at;
     
