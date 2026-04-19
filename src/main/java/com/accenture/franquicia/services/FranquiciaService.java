@@ -1,6 +1,5 @@
 package com.accenture.franquicia.services;
 
-
 import com.accenture.franquicia.dto.TopProductDTO;
 import com.accenture.franquicia.model.Franquicia;
 import com.accenture.franquicia.model.Producto;
