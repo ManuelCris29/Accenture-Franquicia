@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: RDS MySQL para Franchise API
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  DBPassword:
+    Type: String
+    NoEcho: true
+
+Resources:
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group para RDS
+      VpcId: !ImportValue
+        Fn::Sub: franchise-vpc-id-${Environment}
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 10.0.0.0/16
+
+  FranchiseDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub franchise-mysql-${Environment}
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      EngineVersion: '8.0'
+      MasterUsername: admin
+      MasterUserPassword: !Ref DBPassword
+      DBName: franchise_db
+      AllocatedStorage: '20'
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !ImportValue
+        Fn::Sub: franchise-rds-subnet-group-${Environment}
+      MultiAZ: false
+      PubliclyAccessible: false
+      StorageType: gp2
+      DeletionPolicy: Delete
+
+Outputs:
+  RDSEndpoint:
+    Value: !GetAtt FranchiseDB.Endpoint.Address
+    Export:
+      Name: !Sub franchise-rds-endpoint-${Environment}
