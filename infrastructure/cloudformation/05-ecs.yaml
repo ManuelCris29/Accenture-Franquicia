@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ECS Fargate + ALB para Franchise API
+Description: ECS Fargate + ALB para Franquicia API
 
 Parameters:
   Environment:
@@ -13,7 +13,7 @@ Resources:
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub franchise-ecs-execution-role-${Environment}
+      RoleName: !Sub franquicia-ecs-execution-role-${Environment}
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -32,14 +32,14 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !ImportValue
-                  Fn::Sub: franchise-db-secret-arn-${Environment}
+                  Fn::Sub: franquicia-db-secret-arn-${Environment}
 
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group para ALB
       VpcId: !ImportValue
-        Fn::Sub: franchise-vpc-id-${Environment}
+        Fn::Sub: franquicia-vpc-id-${Environment}
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -51,7 +51,7 @@ Resources:
     Properties:
       GroupDescription: Security group para ECS Fargate
       VpcId: !ImportValue
-        Fn::Sub: franchise-vpc-id-${Environment}
+        Fn::Sub: franquicia-vpc-id-${Environment}
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 8080
@@ -61,26 +61,26 @@ Resources:
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: !Sub franchise-alb-${Environment}
+      Name: !Sub franquicia-alb-${Environment}
       Scheme: internet-facing
       Type: application
       Subnets:
         - !ImportValue
-          Fn::Sub: franchise-subnet-public-a-${Environment}
+          Fn::Sub: franquicia-subnet-public-a-${Environment}
         - !ImportValue
-          Fn::Sub: franchise-subnet-public-b-${Environment}
+          Fn::Sub: franquicia-subnet-public-b-${Environment}
       SecurityGroups:
         - !Ref ALBSecurityGroup
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub franchise-tg-${Environment}
+      Name: !Sub franquicia-tg-${Environment}
       Port: 8080
       Protocol: HTTP
       TargetType: ip
       VpcId: !ImportValue
-        Fn::Sub: franchise-vpc-id-${Environment}
+        Fn::Sub: franquicia-vpc-id-${Environment}
       HealthCheckPath: /actuator/health
       HealthCheckIntervalSeconds: 30
       HealthyThresholdCount: 2
@@ -99,18 +99,18 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: !Sub franchise-cluster-${Environment}
+      ClusterName: !Sub franquicia-cluster-${Environment}
 
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /ecs/franchise-api-${Environment}
+      LogGroupName: !Sub /ecs/franquicia-api-${Environment}
       RetentionInDays: 7
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Sub franchise-api-${Environment}
+      Family: !Sub franquicia-api-${Environment}
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -118,18 +118,18 @@ Resources:
       Memory: '512'
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
       ContainerDefinitions:
-        - Name: franchise-api
+        - Name: franquicia-api
           Image: !Ref ImageUri
           PortMappings:
             - ContainerPort: 8080
           Environment:
             - Name: DB_HOST
               Value: !ImportValue
-                Fn::Sub: franchise-rds-endpoint-${Environment}
+                Fn::Sub: franquicia-rds-endpoint-${Environment}
             - Name: DB_PORT
               Value: '3306'
             - Name: DB_NAME
-              Value: franchise_db
+              Value: franquicia_db
             - Name: AWS_REGION
               Value: us-east-1
             - Name: AWS_SECRET_NAME
@@ -137,15 +137,15 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Sub /ecs/franchise-api-${Environment}
+              awslogs-group: !Sub /ecs/franquicia-api-${Environment}
               awslogs-region: us-east-1
-              awslogs-stream-prefix: franchise
+              awslogs-stream-prefix: franquicia
 
   ECSService:
     Type: AWS::ECS::Service
     DependsOn: ALBListener
     Properties:
-      ServiceName: !Sub franchise-api-service-${Environment}
+      ServiceName: !Sub franquicia-api-service-${Environment}
       Cluster: !Ref ECSCluster
       TaskDefinition: !Ref TaskDefinition
       LaunchType: FARGATE
@@ -154,14 +154,14 @@ Resources:
         AwsvpcConfiguration:
           Subnets:
             - !ImportValue
-              Fn::Sub: franchise-subnet-private-a-${Environment}
+              Fn::Sub: franquicia-subnet-private-a-${Environment}
             - !ImportValue
-              Fn::Sub: franchise-subnet-private-b-${Environment}
+              Fn::Sub: franquicia-subnet-private-b-${Environment}
           SecurityGroups:
             - !Ref ECSSecurityGroup
           AssignPublicIp: DISABLED
       LoadBalancers:
-        - ContainerName: franchise-api
+        - ContainerName: franquicia-api
           ContainerPort: 8080
           TargetGroupArn: !Ref TargetGroup
 
@@ -169,4 +169,4 @@ Outputs:
   LoadBalancerURL:
     Value: !Sub http://${ALB.DNSName}
     Export:
-      Name: !Sub franchise-api-url-${Environment}
+      Name: !Sub franquicia-api-url-${Environment}
