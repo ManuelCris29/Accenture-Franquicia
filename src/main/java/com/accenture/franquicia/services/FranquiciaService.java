@@ -1,6 +1,6 @@
 package com.accenture.franquicia.services;
 
-import com.accenture.franquicia.dto.ErrorResponse;
+
 import com.accenture.franquicia.dto.TopProductDTO;
 import com.accenture.franquicia.model.Franquicia;
 import com.accenture.franquicia.model.Producto;
@@ -27,6 +27,12 @@ public class FranquiciaService {
     // ── Franquicia ──────────────────────────────────────────
 
     public Mono<Franquicia> createFranquicia(Franquicia franquicia) {
+
+        if (franquicia.getName() == null || franquicia.getName().isBlank()) {
+             return Mono.error(
+                new IllegalArgumentException("El nombre de la franquicia no puede estar vacío"));
+        }
+        
         franquicia.setCreated_at(LocalDateTime.now());
         return franquiciaRepository.save(franquicia)
                 .doOnSuccess(f -> log.info("Franquicia creada: {}", f.getId()))
@@ -41,6 +47,12 @@ public class FranquiciaService {
     }
 
     public Mono<Franquicia> updateFranquicia(Long id, String newName) {
+       
+        // En updateNombreFranquicia
+        if (newName == null || newName.isBlank()) {
+            return Mono.error(
+                new IllegalArgumentException("El nombre no puede estar vacío"));
+        }
         return franquiciaRepository.findById(id)
                 .switchIfEmpty(Mono.error(
                     new RuntimeException("Franquicia no encontrada con ID: " + id)))
@@ -77,6 +89,13 @@ public class FranquiciaService {
     // ── Sucursal ──────────────────────────────────────────
 
     public Mono<Sucursal> createSucursal(Long franquiciaId, Sucursal sucursal) {
+        
+        // En addSucursal
+        if (sucursal.getName() == null || sucursal.getName().isBlank()) {
+            return Mono.error(
+                new IllegalArgumentException("El nombre de la sucursal no puede estar vacío"));
+        }
+
         return franquiciaRepository.findById(franquiciaId)
                 .switchIfEmpty(Mono.error
                     (new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
@@ -104,6 +123,12 @@ public class FranquiciaService {
     }
 
     public Mono<Sucursal> updateSucursalName(Long sucursalId, String newName) {
+        
+        if (newName == null || newName.isBlank()) {
+           return Mono.error(
+            new IllegalArgumentException("El nombre no puede estar vacío"));
+        }
+
         return sucursalRepository.findById(sucursalId)
                 .switchIfEmpty(Mono.error(
                     new RuntimeException("Sucursal no encontrada con ID: " + sucursalId)))
@@ -136,6 +161,16 @@ public class FranquiciaService {
      // ── Producto ──────────────────────────────────────────
 
      public Mono<Producto> createProducto(Long sucursalId, Producto producto) {
+
+        if (producto.getName() == null || producto.getName().isBlank()) {
+        return Mono.error(
+            new IllegalArgumentException("El nombre del producto no puede estar vacío"));
+        }
+        if (producto.getStock() < 0) {
+            return Mono.error(
+                new IllegalArgumentException("El stock no puede ser negativo"));
+        }
+
         return sucursalRepository.findById(sucursalId)
                 .switchIfEmpty(Mono.error(new RuntimeException("Sucursal no encontrada con ID: " + sucursalId)))
                 .flatMap(s -> {
@@ -177,6 +212,11 @@ public class FranquiciaService {
             }
 
     public Mono<Producto> UpdateProductoName(Long productoId, String newName) {
+        
+        if (newName == null || newName.isBlank()) {
+            return Mono.error(
+        new IllegalArgumentException("El nombre no puede estar vacío"));
+        }
         return productoRepository.findById(productoId)
                 .switchIfEmpty(Mono.error(
                     new RuntimeException("Producto no encontrado con ID: " + productoId)))
@@ -205,21 +245,39 @@ public class FranquiciaService {
         return franquiciaRepository.findById(franquiciaId)
                 .switchIfEmpty(Mono.error(
                     new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
-                .flatMapMany(f -> sucursalRepository.findByFranquiciaId(franquiciaId)
+                .flatMapMany(f -> 
+                    sucursalRepository.findByFranquiciaId(franquiciaId)
                         .flatMap(sucursal -> 
+                            sucursalRepository.findByFranquiciaId(franquiciaId)
+                                .flatMap(s ->
                             productoRepository.findBySucursalId(sucursal.getId())
-                                .sort((p1, p2) -> p2.getStock().compareTo(p1.getStock())) // Ordenar por stock descendente
-                                .next() // Tomar solo el producto con más stock de cada sucursal
-                                .map(producto -> TopProductDTO.builder()
+                                 .reduce((p1, p2) -> {
+                                    Integer s1 = p1.getStock();
+                                    Integer s2 = p2.getStock();
+                                    if (s1 == null) return p2;
+                                    if (s2 == null) return p1;
+                                    return s1 >= s2 ? p1 : p2;
+                                }) 
+                                .map(topProducto -> TopProductDTO.builder()
                                         .sucursalId(sucursal.getId())
                                         .sucursalName(sucursal.getName())
-                                        .productId(producto.getId())
-                                        .productName(producto.getName())
-                                .stock(producto.getStock())
+                                        .productId(topProducto.getId())
+                                        .productName(topProducto.getName())
+                                        .stock(topProducto.getStock())
+                                        .build()
+                                    )
+
+                            .defaultIfEmpty(TopProductDTO.builder()
+                                .sucursalId(sucursal.getId())
+                                .sucursalName(sucursal.getName())
+                                .productId(0L)
+                                .productName("No hay productos")
+                                .stock(0)
                                 .build()
                             )
                         )
-                    ); // Tomar solo los 5 primeros
+                    )
+                );
     }
     
 
