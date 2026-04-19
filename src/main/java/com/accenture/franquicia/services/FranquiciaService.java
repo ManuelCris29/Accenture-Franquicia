@@ -56,6 +56,24 @@ public class FranquiciaService {
         return franquiciaRepository.findAll();
     }
 
+    public Mono<Void> deleteFranquicia(Long id) {
+        return franquiciaRepository.findById(id)
+            .switchIfEmpty(Mono.error(
+                new RuntimeException("Franquicia no encontrada: " + id)))
+            .flatMap(franquicia ->
+                sucursalRepository.findByFranquiciaId(id)
+                    .flatMap(sucursal ->
+                        productoRepository.findBySucursalId(sucursal.getId())
+                            .flatMap(producto ->
+                                productoRepository.deleteById(producto.getId())
+                            )
+                            .then(sucursalRepository.deleteById(sucursal.getId()))
+                    )
+                    .then(franquiciaRepository.deleteById(id))
+            )
+            .doOnSuccess(v -> log.info("Franquicia eliminada: {}", id));
+    }
+
     // ── Sucursal ──────────────────────────────────────────
 
     public Mono<Sucursal> createSucursal(Long franquiciaId, Sucursal sucursal) {
@@ -67,8 +85,22 @@ public class FranquiciaService {
                     sucursal.setCreated_at(LocalDateTime.now());
                     return sucursalRepository.save(sucursal);
                 })
-                .doOnSuccess(s -> log.info("Sucursal creada: {}", s.getId(), franquiciaId))
-                ;
+                .doOnSuccess(s -> log.info("Sucursal creada: {}", 
+                s.getId(), franquiciaId));
+    }
+
+    public Mono<Sucursal> getSucursalById(Long sucursalId) {
+        return sucursalRepository.findById(sucursalId)
+            .switchIfEmpty(Mono.error(
+                new RuntimeException("Sucursal no encontrada: " + sucursalId)));
+    }
+
+    public Flux<Sucursal> getSucursalesByFranquicia(Long franquiciaId) {
+        return franquiciaRepository.findById(franquiciaId)
+            .switchIfEmpty(Mono.error(
+                new RuntimeException("Franquicia no encontrada: " + franquiciaId)))
+            .flatMapMany(f ->
+                sucursalRepository.findByFranquiciaId(franquiciaId));
     }
 
     public Mono<Sucursal> updateSucursalName(Long sucursalId, String newName) {
@@ -87,6 +119,20 @@ public class FranquiciaService {
         return sucursalRepository.findByFranquiciaId(franquiciaId);
     }
 
+    public Mono<Void> deleteSucursal(Long sucursalId) {
+        return sucursalRepository.findById(sucursalId)
+            .switchIfEmpty(Mono.error(
+                new RuntimeException("Sucursal no encontrada: " + sucursalId)))
+            .flatMap(sucursal ->
+                productoRepository.findBySucursalId(sucursalId)
+                    .flatMap(producto ->
+                        productoRepository.deleteById(producto.getId())
+                    )
+                    .then(sucursalRepository.deleteById(sucursalId))
+            )
+            .doOnSuccess(v -> log.info("Sucursal eliminada: {}", sucursalId));
+    }
+
      // ── Producto ──────────────────────────────────────────
 
      public Mono<Producto> createProducto(Long sucursalId, Producto producto) {
@@ -100,16 +146,19 @@ public class FranquiciaService {
                 .doOnSuccess(p -> log.info("Producto creado: {}", p.getId(), sucursalId));
     }
 
-    public Mono <Void> deleteProducto(Long sucursalId, Long productoId){
+
+    public Mono<Producto> getProductoById(Long productoId) {
         return productoRepository.findById(productoId)
-                .switchIfEmpty(Mono.error(new RuntimeException("Producto no encontrado con ID: " + productoId)))
-                .flatMap(p -> {
-                    if (p.getSucursalId() != sucursalId) {
-                        return Mono.error(new RuntimeException("El producto no pertenece a la sucursal especificada"));
-                    }
-                    return productoRepository.delete(p);
-                })
-                .doOnSuccess(v -> log.info("Producto eliminado: {}", productoId));
+            .switchIfEmpty(Mono.error(
+                new RuntimeException("Producto no encontrado: " + productoId)));
+    }
+
+    public Flux<Producto> getProductosBySucursal(Long sucursalId) {
+        return sucursalRepository.findById(sucursalId)
+            .switchIfEmpty(Mono.error(
+                new RuntimeException("Sucursal no encontrada: " + sucursalId)))
+            .flatMapMany(s ->
+                productoRepository.findBySucursalId(sucursalId));
     }
 
     public Mono<Producto> updateStock(Long productoId, Integer newStock) {
@@ -126,6 +175,7 @@ public class FranquiciaService {
                 })
                 .doOnSuccess(p -> log.info("Stock actualizado para producto: {}", productoId));
             }
+
     public Mono<Producto> UpdateProductoName(Long productoId, String newName) {
         return productoRepository.findById(productoId)
                 .switchIfEmpty(Mono.error(
@@ -137,7 +187,40 @@ public class FranquiciaService {
                 .doOnSuccess(p -> log.info("Nombre actualizado para producto: {}", productoId));
             }
     
-   
+     public Mono <Void> deleteProducto(Long sucursalId, Long productoId){
+        return productoRepository.findById(productoId)
+                .switchIfEmpty(Mono.error(new RuntimeException("Producto no encontrado con ID: " + productoId)))
+                .flatMap(p -> {
+                    if (p.getSucursalId() != sucursalId) {
+                        return Mono.error(new RuntimeException("El producto no pertenece a la sucursal especificada"));
+                    }
+                    return productoRepository.delete(p);
+                })
+                .doOnSuccess(v -> log.info("Producto eliminado: {}", productoId));
+    }
 
+    //-─────────Productos con mas stock por sucursal────────────────────────────────────────
+
+     public Flux<TopProductDTO> getTopProductsByFranquiciaId(Long franquiciaId) {
+        return franquiciaRepository.findById(franquiciaId)
+                .switchIfEmpty(Mono.error(
+                    new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
+                .flatMapMany(f -> sucursalRepository.findByFranquiciaId(franquiciaId)
+                        .flatMap(sucursal -> 
+                            productoRepository.findBySucursalId(sucursal.getId())
+                                .sort((p1, p2) -> p2.getStock().compareTo(p1.getStock())) // Ordenar por stock descendente
+                                .next() // Tomar solo el producto con más stock de cada sucursal
+                                .map(producto -> TopProductDTO.builder()
+                                        .sucursalId(sucursal.getId())
+                                        .sucursalName(sucursal.getName())
+                                        .productId(producto.getId())
+                                        .productName(producto.getName())
+                                .stock(producto.getStock())
+                                .build()
+                            )
+                        )
+                    ); // Tomar solo los 5 primeros
+    }
     
+
 }
