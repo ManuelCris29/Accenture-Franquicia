@@ -18,8 +18,8 @@ public class Sucursal {
     @Id
     private Long id;
     private String name;
-    private long franquiciaId;
-    private LocalDateTime created_at;   
+    private Long franquiciaId;
+    private LocalDateTime createdAt;   
 }
 
 
