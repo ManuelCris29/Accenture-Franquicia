@@ -1,6 +1,5 @@
 package com.accenture.franquicia.services;
 
-
 import com.accenture.franquicia.dto.TopProductDTO;
 import com.accenture.franquicia.model.Franquicia;
 import com.accenture.franquicia.model.Producto;
@@ -33,7 +32,7 @@ public class FranquiciaService {
                 new IllegalArgumentException("El nombre de la franquicia no puede estar vacío"));
         }
         
-        franquicia.setCreated_at(LocalDateTime.now());
+        franquicia.setCreatedAt(LocalDateTime.now());
         return franquiciaRepository.save(franquicia)
                 .doOnSuccess(f -> log.info("Franquicia creada: {}", f.getId()))
                 ;
@@ -101,7 +100,7 @@ public class FranquiciaService {
                     (new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
                 .flatMap(f -> {
                     sucursal.setFranquiciaId(franquiciaId);
-                    sucursal.setCreated_at(LocalDateTime.now());
+                    sucursal.setCreatedAt(LocalDateTime.now());
                     return sucursalRepository.save(sucursal);
                 })
                 .doOnSuccess(s -> log.info("Sucursal creada: {}", 
@@ -175,7 +174,7 @@ public class FranquiciaService {
                 .switchIfEmpty(Mono.error(new RuntimeException("Sucursal no encontrada con ID: " + sucursalId)))
                 .flatMap(s -> {
                     producto.setSucursalId(sucursalId);
-                    producto.setCreated_at(LocalDateTime.now());
+                    producto.setCreatedAt(LocalDateTime.now());
                     return productoRepository.save(producto);
                 })
                 .doOnSuccess(p -> log.info("Producto creado: {}", p.getId(), sucursalId));
@@ -242,42 +241,41 @@ public class FranquiciaService {
     //-─────────Productos con mas stock por sucursal────────────────────────────────────────
 
      public Flux<TopProductDTO> getTopProductsByFranquiciaId(Long franquiciaId) {
-        return franquiciaRepository.findById(franquiciaId)
-                .switchIfEmpty(Mono.error(
-                    new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
-                .flatMapMany(f -> 
-                    sucursalRepository.findByFranquiciaId(franquiciaId)
-                        .flatMap(sucursal -> 
-                            sucursalRepository.findByFranquiciaId(franquiciaId)
-                                .flatMap(s ->
-                            productoRepository.findBySucursalId(sucursal.getId())
-                                 .reduce((p1, p2) -> {
-                                    Integer s1 = p1.getStock();
-                                    Integer s2 = p2.getStock();
-                                    if (s1 == null) return p2;
-                                    if (s2 == null) return p1;
-                                    return s1 >= s2 ? p1 : p2;
-                                }) 
-                                .map(topProducto -> TopProductDTO.builder()
-                                        .sucursalId(sucursal.getId())
-                                        .sucursalName(sucursal.getName())
-                                        .productId(topProducto.getId())
-                                        .productName(topProducto.getName())
-                                        .stock(topProducto.getStock())
-                                        .build()
-                                    )
-
-                            .defaultIfEmpty(TopProductDTO.builder()
-                                .sucursalId(sucursal.getId())
-                                .sucursalName(sucursal.getName())
-                                .productId(0L)
-                                .productName("No hay productos")
-                                .stock(0)
-                                .build()
-                            )
+    return franquiciaRepository.findById(franquiciaId)
+        .switchIfEmpty(Mono.error(
+            new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
+        .flatMapMany(f ->
+            sucursalRepository.findByFranquiciaId(franquiciaId)
+                .flatMap(sucursal ->
+                    productoRepository.findBySucursalId(sucursal.getId())
+                        .sort((p1, p2) -> {
+                            Integer s1 = p1.getStock();
+                            Integer s2 = p2.getStock();
+                            if (s1 == null) return 1;
+                            if (s2 == null) return -1;
+                            int comp = s2.compareTo(s1);
+                            if (comp != 0) return comp;
+                            return p1.getName().compareTo(p2.getName());
+                        })
+                        .next()
+                        .map(topProducto -> TopProductDTO.builder()
+                            .sucursalId(sucursal.getId())
+                            .sucursalName(sucursal.getName())
+                            .productId(topProducto.getId())
+                            .productName(topProducto.getName())
+                            .stock(topProducto.getStock())
+                            .build()
                         )
-                    )
-                );
+                        .defaultIfEmpty(TopProductDTO.builder()
+                            .sucursalId(sucursal.getId())
+                            .sucursalName(sucursal.getName())
+                            .productId(0L)
+                            .productName("No hay productos")
+                            .stock(0)
+                            .build()
+                        )
+                )
+        );
     }
     
 

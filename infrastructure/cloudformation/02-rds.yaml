@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: RDS MySQL para Franquicia API
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  DBPassword:
+    Type: String
+    NoEcho: true
+
+Resources:
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group para RDS
+      VpcId: !ImportValue
+        Fn::Sub: franquicia-vpc-id-${Environment}
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 10.0.0.0/16
+
+  FranquiciaDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub franquicia-mysql-${Environment}
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      EngineVersion: '8.0'
+      MasterUsername: admin
+      MasterUserPassword: !Ref DBPassword
+      DBName: franquicia_db
+      AllocatedStorage: '20'
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !ImportValue
+        Fn::Sub: franquicia-rds-subnet-group-${Environment}
+      MultiAZ: false
+      PubliclyAccessible: false
+      StorageType: gp2
+      DeletionPolicy: Delete
+
+Outputs:
+  RDSEndpoint:
+    Value: !GetAtt FranquiciaDB.Endpoint.Address
+    Export:
+      Name: !Sub franquicia-rds-endpoint-${Environment}

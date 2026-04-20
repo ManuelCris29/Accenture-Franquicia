@@ -42,7 +42,7 @@ public class FranquiciaController {
     @PatchMapping("/{id}/nombre")
     public Mono<Franquicia> actualizarNombreFranquicia(
         @PathVariable Long id, 
-        @RequestBody String nombre) {
+        @RequestParam String nombre) {
         return franquiciaService.updateFranquicia(id, nombre);
     }
 
@@ -70,10 +70,10 @@ public class FranquiciaController {
     }
 
     // Criterio 9: Actualizar nombre de sucursal
-    @PatchMapping("/sucursales/{sucursalId}/name")
+    @PatchMapping("/sucursales/{sucursalId}/nombre")
     public Mono<Sucursal> updateBranchName(
             @PathVariable Long sucursalId,
-            @RequestBody String nombre) {
+            @RequestParam String nombre) {
         return franquiciaService.updateSucursalName(sucursalId, nombre);
     }
 
@@ -103,11 +103,11 @@ public class FranquiciaController {
     }
 
     // Plus criterio 13: Actualizar nombre de producto
-    @PatchMapping("/sucursales/productos/{productId}/name")
+    @PatchMapping("/sucursales/productos/{productId}/nombre")
     public Mono<Producto> updateProductName(
             @PathVariable Long productId,
-            @RequestParam String name) {
-        return franquiciaService.UpdateProductoName(productId, name);
+            @RequestParam String nombre) {
+        return franquiciaService.UpdateProductoName(productId, nombre);
     }
 
 
