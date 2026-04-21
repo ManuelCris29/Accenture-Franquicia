@@ -231,7 +231,7 @@ public class FranquiciaService {
         return productoRepository.findById(productoId)
                 .switchIfEmpty(Mono.error(new RuntimeException("Producto no encontrado con ID: " + productoId)))
                 .flatMap(p -> {
-                    if (p.getSucursalId() != sucursalId) {
+                    if (!p.getSucursalId().equals(sucursalId)) {
                         return Mono.error(new RuntimeException("El producto no pertenece a la sucursal especificada"));
                     }
                     return productoRepository.delete(p);
