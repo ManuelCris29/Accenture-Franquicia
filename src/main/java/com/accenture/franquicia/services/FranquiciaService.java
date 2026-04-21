@@ -147,9 +147,9 @@ public class FranquiciaService {
                 ;
     }
 
-     public Flux<Sucursal> getSucursalesByFranquiciaId(Long franquiciaId) {
-        return sucursalRepository.findByFranquiciaId(franquiciaId);
-    }
+     // public Flux<Sucursal> getSucursalesByFranquiciaId(Long franquiciaId) {
+    //     return sucursalRepository.findByFranquiciaId(franquiciaId);
+    // }
 
     public Mono<Void> deleteSucursal(Long sucursalId) {
         return sucursalRepository.findById(sucursalId)
