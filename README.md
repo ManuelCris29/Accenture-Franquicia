@@ -57,32 +57,47 @@ CI/CD automatizado con GitHub Actions
 ```
 franquicia-api/
 ├── src/
-│   └── main/
-│       ├── java/com/accenture/franquicia/
-│       │   ├── config/
-│       │   │   ├── AwsConfig.java
-│       │   │   ├── R2dbcConfig.java
-│       │   │   └── SecurityConfig.java
-│       │   ├── controller/
-│       │   │   └── FranquiciaController.java
-│       │   ├── dto/
-│       │   │   ├── TopProductDTO.java
-│       │   │   └── ErrorResponse.java
-│       │   ├── exception/
-│       │   │   └── GlobalExceptionHandler.java
-│       │   ├── model/
-│       │   │   ├── Franquicia.java
-│       │   │   ├── Sucursal.java
-│       │   │   └── Producto.java
-│       │   ├── repository/
-│       │   │   ├── FranquiciaRepository.java
-│       │   │   ├── SucursalRepository.java
-│       │   │   └── ProductoRepository.java
-│       │   └── services/
-│       │       └── FranquiciaService.java
-│       └── resources/
-│           ├── application.yaml
-│           └── schema.sql
+│   ├── main/
+│   │   ├── java/com/accenture/franquicia/
+│   │   │   ├── config/
+│   │   │   │   ├── AwsConfig.java
+│   │   │   │   ├── OpenApiConfig.java
+│   │   │   │   ├── R2dbcConfig.java
+│   │   │   │   └── SecurityConfig.java
+│   │   │   ├── controller/
+│   │   │   │   └── FranquiciaController.java
+│   │   │   ├── dto/
+│   │   │   │   ├── FranquiciaRequest.java
+│   │   │   │   ├── FranquiciaResponse.java
+│   │   │   │   ├── SucursalRequest.java
+│   │   │   │   ├── SucursalResponse.java
+│   │   │   │   ├── ProductoRequest.java
+│   │   │   │   ├── ProductoResponse.java
+│   │   │   │   ├── TopProductDTO.java
+│   │   │   │   └── ErrorResponse.java
+│   │   │   ├── exception/
+│   │   │   │   └── GlobalExceptionHandler.java
+│   │   │   ├── model/
+│   │   │   │   ├── Franquicia.java
+│   │   │   │   ├── Sucursal.java
+│   │   │   │   └── Producto.java
+│   │   │   ├── repository/
+│   │   │   │   ├── FranquiciaRepository.java
+│   │   │   │   ├── SucursalRepository.java
+│   │   │   │   └── ProductoRepository.java
+│   │   │   └── services/
+│   │   │       └── FranquiciaService.java
+│   │   └── resources/
+│   │       ├── static/
+│   │       │   └── swagger-ui.html
+│   │       ├── application.yaml
+│   │       └── schema.sql
+│   └── test/
+│       └── java/com/accenture/franquicia/
+│           └── services/
+│               ├── FranquiciaServiceTest.java
+│               ├── SucursalServiceTest.java
+│               └── ProductoServiceTest.java
 ├── infrastructure/
 │   └── cloudformation/
 │       ├── 01-vpc.yaml
@@ -188,7 +203,23 @@ Respuesta esperada:
 {"status": "UP"}
 ```
 
-### 5. Bajar el entorno
+### 5. Acceder a la documentación Swagger UI
+
+Con la API corriendo, abre en el navegador:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+Desde ahí puedes ver y probar todos los endpoints de forma interactiva sin necesidad de Postman.
+
+También puedes obtener la especificación OpenAPI en formato JSON:
+
+```
+http://localhost:8080/v3/api-docs
+```
+
+### 6. Bajar el entorno
 
 ```bash
 docker-compose down
