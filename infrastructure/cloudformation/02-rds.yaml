@@ -24,6 +24,7 @@ Resources:
 
   FranquiciaDB:
     Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
     Properties:
       DBInstanceIdentifier: !Sub franquicia-mysql-${Environment}
       DBInstanceClass: db.t3.micro
@@ -40,7 +41,7 @@ Resources:
       MultiAZ: false
       PubliclyAccessible: false
       StorageType: gp2
-      DeletionPolicy: Delete
+      
 
 Outputs:
   RDSEndpoint:
