@@ -53,6 +53,39 @@ public class FranquiciaController {
         return franquiciaService.deleteFranquicia(id);
     }
 
+    // Listar sucursales de una franquicia
+    @GetMapping("/{franquiciaId}/sucursales")
+    public Flux<Sucursal> listarSucursales(@PathVariable Long franquiciaId) {
+        return franquiciaService.getSucursalesByFranquicia(franquiciaId);
+    }
+
+    // Obtener sucursal por id
+    @GetMapping("/sucursales/{sucursalId}")
+    public Mono<Sucursal> obtenerSucursalPorId(@PathVariable Long sucursalId) {
+        return franquiciaService.getSucursalById(sucursalId);
+    }
+
+    // Listar productos de una sucursal
+    @GetMapping("/sucursales/{sucursalId}/productos")
+    public Flux<Producto> listarProductos(@PathVariable Long sucursalId) {
+        return franquiciaService.getProductosBySucursal(sucursalId);
+    }
+
+
+    // Obtener producto por id
+    @GetMapping("/sucursales/productos/{productoId}")
+    public Mono<Producto> obtenerProductoPorId(@PathVariable Long productoId) {
+        return franquiciaService.getProductoById(productoId);
+    }
+
+    // Eliminar sucursal
+    @DeleteMapping("/sucursales/{sucursalId}")
+@   ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> eliminarSucursal(@PathVariable Long sucursalId) {
+        return franquiciaService.deleteSucursal(sucursalId);
+    }
+
+    
     // Criterio 7: Producto con más stock por sucursal
     @GetMapping("/{id}/top-productos")
     public Flux<TopProductDTO> obtenerProductoPorSucursal(@PathVariable Long id){
@@ -60,7 +93,7 @@ public class FranquiciaController {
             
     }
 
-    // Criterio 8: Agregar sucursal a granquicia
+    // Criterio 8: Agregar sucursal a franquicia
     @PostMapping("/{franquiciaId}/sucursales")
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<Sucursal> addBranch(
