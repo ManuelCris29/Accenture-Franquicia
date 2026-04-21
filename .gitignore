@@ -40,3 +40,6 @@ build/
 .docker/
 .DS_Store
 Thumbs.db
+
+### Claude Code ###
+.claude/
