@@ -131,7 +131,7 @@ public class FranquiciaController {
     @PatchMapping("/sucursales/productos/{productoId}/stock")
     public Mono<Producto> updateProductStock(
             @PathVariable Long productoId,
-            @RequestBody Integer stock) {
+            @RequestParam Integer stock) {
         return franquiciaService.updateStock(productoId, stock);
     }
 
