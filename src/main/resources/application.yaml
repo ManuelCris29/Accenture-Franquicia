@@ -6,8 +6,6 @@ spring:
     name: franquicia-api
   r2dbc:
     url: r2dbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:franquicia_db}
-    username: ${DB_USERNAME:admin}
-    password: ${DB_PASSWORD:password}
   sql:
     init:
       mode: always
