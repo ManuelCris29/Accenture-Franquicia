@@ -32,3 +32,11 @@ build/
 ### VS Code ###
 .vscode/
 .env
+
+*.jar
+*.war
+.vscode/
+*.log
+.docker/
+.DS_Store
+Thumbs.db
