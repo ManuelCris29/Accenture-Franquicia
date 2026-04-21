@@ -32,11 +32,16 @@ public class FranquiciaService {
                 new IllegalArgumentException("El nombre de la franquicia no puede estar vacío"));
         }
         
-        franquicia.setCreatedAt(LocalDateTime.now());
-        return franquiciaRepository.save(franquicia)
-                .doOnSuccess(f -> log.info("Franquicia creada: {}", f.getId()))
-                ;
-    }
+        return franquiciaRepository.findByName(franquicia.getName())
+                .flatMap(existing -> Mono.<Franquicia>error(
+                        new IllegalArgumentException("Ya existe una franquicia con el nombre" + franquicia.getName())))
+                .switchIfEmpty(Mono.defer(()->{
+                    franquicia.setCreatedAt(LocalDateTime.now());
+                    return franquiciaRepository.save(franquicia);
+                        
+                } ))
+                .doOnSuccess(f -> log.info("Franquicia creada: {}", f.getId()));
+        }
 
     public Mono<Franquicia> getFranquiciaById(Long id) {
         return franquiciaRepository.findById(id)
@@ -97,15 +102,17 @@ public class FranquiciaService {
         }
 
         return franquiciaRepository.findById(franquiciaId)
-                .switchIfEmpty(Mono.error
-                    (new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
-                .flatMap(f -> {
+            .switchIfEmpty(Mono.error(new RuntimeException("Franquicia no encontrada con ID: " + franquiciaId)))
+            .flatMap(f -> sucursalRepository.findByNameAndFranquiciaId(sucursal.getName(), franquiciaId)
+                .flatMap(existing -> Mono.<Sucursal>error(
+                    new IllegalArgumentException("Ya existe una sucursal con el nombre: " + sucursal.getName() + " en esta franquicia")))
+                .switchIfEmpty(Mono.defer(() -> {
                     sucursal.setFranquiciaId(franquiciaId);
                     sucursal.setCreatedAt(LocalDateTime.now());
                     return sucursalRepository.save(sucursal);
-                })
-                .doOnSuccess(s -> log.info("Sucursal creada: {}", 
-                s.getId(), franquiciaId));
+                }))
+            )
+            .doOnSuccess(s -> log.info("Sucursal creada: {}", s.getId()));
     }
 
     public Mono<Sucursal> getSucursalById(Long sucursalId) {
@@ -156,30 +163,37 @@ public class FranquiciaService {
                     .then(sucursalRepository.deleteById(sucursalId))
             )
             .doOnSuccess(v -> log.info("Sucursal eliminada: {}", sucursalId));
-    }
+        }
 
      // ── Producto ──────────────────────────────────────────
 
      public Mono<Producto> createProducto(Long sucursalId, Producto producto) {
+            if (producto.getName() == null || producto.getName().isBlank()) {
+                    return Mono.error(
+                        new IllegalArgumentException("El nombre del producto no puede estar vacío"));
+                }
+            if (producto.getStock() < 0) {
+                return Mono.error(
+                    new IllegalArgumentException("El stock no puede ser negativo"));
+            }
 
-        if (producto.getName() == null || producto.getName().isBlank()) {
-        return Mono.error(
-            new IllegalArgumentException("El nombre del producto no puede estar vacío"));
-        }
-        if (producto.getStock() < 0) {
-            return Mono.error(
-                new IllegalArgumentException("El stock no puede ser negativo"));
-        }
-
-        return sucursalRepository.findById(sucursalId)
+            return sucursalRepository.findById(sucursalId)
                 .switchIfEmpty(Mono.error(new RuntimeException("Sucursal no encontrada con ID: " + sucursalId)))
-                .flatMap(s -> {
-                    producto.setSucursalId(sucursalId);
-                    producto.setCreatedAt(LocalDateTime.now());
-                    return productoRepository.save(producto);
-                })
-                .doOnSuccess(p -> log.info("Producto creado: {}", p.getId(), sucursalId));
-    }
+                .flatMap(s -> productoRepository.findByNameAndSucursalId(producto.getName(), sucursalId)
+                    .flatMap(existing -> {
+                        // Ya existe — sumar el stock
+                        existing.setStock(existing.getStock() + producto.getStock());
+                        return productoRepository.save(existing);
+                    })
+                    .switchIfEmpty(Mono.defer(() -> {
+                        // No existe — crear nuevo
+                        producto.setSucursalId(sucursalId);
+                        producto.setCreatedAt(LocalDateTime.now());
+                        return productoRepository.save(producto);
+                    }))
+                )
+                .doOnSuccess(p -> log.info("Producto creado/actualizado: {}", p.getId()));
+        }
 
 
     public Mono<Producto> getProductoById(Long productoId) {
