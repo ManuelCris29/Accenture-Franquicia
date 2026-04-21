@@ -52,6 +52,7 @@ public class FranquiciaService {
             return Mono.error(
                 new IllegalArgumentException("El nombre no puede estar vacío"));
         }
+
         return franquiciaRepository.findById(id)
                 .switchIfEmpty(Mono.error(
                     new RuntimeException("Franquicia no encontrada con ID: " + id)))
