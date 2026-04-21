@@ -398,6 +398,35 @@ Si no aparece nada — todo eliminado y sin costos.
 
 ---
 
+## Pruebas unitarias
+
+El proyecto incluye 41 pruebas unitarias que cubren la capa de servicio completa.
+
+### Ejecutar los tests
+
+```bash
+mvn test
+```
+
+Resultado esperado:
+
+```
+Tests run: 41, Failures: 0, Errors: 0, Skipped: 1
+BUILD SUCCESS
+```
+
+> El test saltado (`Skipped: 1`) es `FranquiciaApplicationTests`, desactivado intencionalmente porque es una prueba de integración que requiere Docker con MySQL y LocalStack corriendo.
+
+### Cobertura de pruebas
+
+| Clase | Pruebas | Casos cubiertos |
+|---|---|---|
+| `FranquiciaServiceTest` | 12 | Crear (éxito, nombre vacío, null, duplicado), buscar por ID, actualizar nombre, listar, eliminar |
+| `SucursalServiceTest` | 13 | Crear (éxito, nombre vacío, franquicia inexistente, duplicado), buscar, listar, actualizar nombre, eliminar |
+| `ProductoServiceTest` | 16 | Crear (nuevo, acumular stock, nombre vacío, stock negativo, sucursal inexistente), buscar, actualizar stock, eliminar, top productos |
+
+---
+
 ## Endpoints
 
 ### Base URL local
