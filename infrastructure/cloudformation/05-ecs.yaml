@@ -34,6 +34,29 @@ Resources:
                 Resource: !ImportValue
                   Fn::Sub: franquicia-db-secret-arn-${Environment}
 
+  # Role para que el CONTENEDOR acceda a Secrets Manager (agrega esto)
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub franquicia-ecs-task-role-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SecretsManagerReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !ImportValue
+                  Fn::Sub: franquicia-db-secret-arn-${Environment}
+
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -117,6 +140,7 @@ Resources:
       Cpu: '256'
       Memory: '512'
       ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
       ContainerDefinitions:
         - Name: franquicia-api
           Image: !Ref ImageUri
@@ -154,12 +178,12 @@ Resources:
         AwsvpcConfiguration:
           Subnets:
             - !ImportValue
-              Fn::Sub: franquicia-subnet-private-a-${Environment}
+              Fn::Sub: franquicia-subnet-public-a-${Environment}
             - !ImportValue
-              Fn::Sub: franquicia-subnet-private-b-${Environment}
+              Fn::Sub: franquicia-subnet-public-b-${Environment}
           SecurityGroups:
             - !Ref ECSSecurityGroup
-          AssignPublicIp: DISABLED
+          AssignPublicIp: ENABLED
       LoadBalancers:
         - ContainerName: franquicia-api
           ContainerPort: 8080
