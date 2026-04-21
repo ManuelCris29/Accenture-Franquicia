@@ -57,16 +57,16 @@ franquicia-api/
 │   └── main/
 │       ├── java/com/accenture/franquicia/
 │       │   ├── config/
-│       │   │   ├── AwsConfig.java          ← cliente Secrets Manager + lectura credenciales
-│       │   │   ├── R2dbcConfig.java        ← configuración dinámica R2DBC
-│       │   │   └── SecurityConfig.java     ← configuración Spring Security
+│       │   │   ├── AwsConfig.java
+│       │   │   ├── R2dbcConfig.java
+│       │   │   └── SecurityConfig.java
 │       │   ├── controller/
-│       │   │   └── FranquiciaController.java ← endpoints REST
+│       │   │   └── FranquiciaController.java
 │       │   ├── dto/
-│       │   │   ├── TopProductDTO.java      ← respuesta top productos
-│       │   │   └── ErrorResponse.java      ← respuesta de errores
+│       │   │   ├── TopProductDTO.java
+│       │   │   └── ErrorResponse.java
 │       │   ├── exception/
-│       │   │   └── GlobalExceptionHandler.java ← manejo global de errores
+│       │   │   └── GlobalExceptionHandler.java
 │       │   ├── model/
 │       │   │   ├── Franquicia.java
 │       │   │   ├── Sucursal.java
@@ -76,25 +76,25 @@ franquicia-api/
 │       │   │   ├── SucursalRepository.java
 │       │   │   └── ProductoRepository.java
 │       │   └── services/
-│       │       └── FranquiciaService.java  ← lógica de negocio completa
+│       │       └── FranquiciaService.java
 │       └── resources/
 │           ├── application.yaml
 │           └── schema.sql
 ├── infrastructure/
 │   └── cloudformation/
-│       ├── 01-vpc.yaml        ← VPC, subnets públicas/privadas, internet gateway
-│       ├── 02-rds.yaml        ← RDS MySQL en subnet privada
-│       ├── 03-secrets.yaml    ← Secrets Manager con credenciales DB
-│       ├── 04-ecr.yaml        ← registro de imágenes Docker
-│       └── 05-ecs.yaml        ← ECS Fargate + ALB + IAM Roles
+│       ├── 01-vpc.yaml
+│       ├── 02-rds.yaml
+│       ├── 03-secrets.yaml
+│       ├── 04-ecr.yaml
+│       └── 05-ecs.yaml
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml         ← pipeline CI/CD
+│       └── deploy.yml
 ├── localstack/
-│   └── init-aws.sh            ← inicialización AWS local
-├── Dockerfile                 ← build multistage
-├── docker-compose.yml         ← entorno local completo
-├── .env.example               ← plantilla de variables de entorno
+│   └── init-aws.sh
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example
 ├── .gitignore
 └── README.md
 ```
@@ -103,14 +103,12 @@ franquicia-api/
 
 ## Manejo de ambientes
 
-El proyecto detecta automáticamente en qué ambiente está corriendo:
-
 | Variable `AWS_ENDPOINT` | Ambiente | Credenciales DB |
 |---|---|---|
 | `http://localstack:4566` | Local | Leídas desde LocalStack |
 | Vacía o no definida | AWS | Leídas desde Secrets Manager real |
 
-No se requiere ningún cambio de código entre ambientes — solo variables de entorno.
+No se requiere ningún cambio de código entre ambientes.
 
 ---
 
@@ -123,8 +121,8 @@ No se requiere ningún cambio de código entre ambientes — solo variables de e
 
 ### Para desplegar en AWS
 - Cuenta AWS activa
-- AWS CLI v2 configurado (`aws configure`)
-- Permisos: CloudFormation, ECS, ECR, RDS, Secrets Manager, IAM, VPC, ALB
+- AWS CLI v2 instalado
+- Usuario IAM con política `AdministratorAccess`
 
 ---
 
@@ -178,8 +176,8 @@ franquicia-api | Started FranquiciaApplication
 
 Verifica con:
 
-```bash
-curl http://localhost:8080/actuator/health
+```
+GET http://localhost:8080/actuator/health
 ```
 
 Respuesta esperada:
@@ -190,9 +188,210 @@ Respuesta esperada:
 ### 5. Bajar el entorno
 
 ```bash
-docker-compose down        # conserva datos
-docker-compose down -v     # elimina datos también
+docker-compose down
 ```
+
+---
+
+## Despliegue en AWS
+
+### Prerequisitos AWS
+
+**Paso 1 — Crear usuario IAM**
+
+1. Ve a https://console.aws.amazon.com
+2. Busca IAM → Users → Create user
+3. Nombre: `franquicia-deploy`
+4. Attach policies → AdministratorAccess
+5. Create user → Security credentials → Create access key → CLI
+6. Copia el Access Key ID y Secret Access Key
+
+**Paso 2 — Configurar AWS CLI**
+
+```bash
+aws configure
+```
+
+Ingresa:
+```
+AWS Access Key ID: TU-ACCESS-KEY
+AWS Secret Access Key: TU-SECRET-KEY
+Default region name: us-east-1
+Default output format: json
+```
+
+**Paso 3 — Verificar**
+
+```bash
+aws sts get-caller-identity
+```
+
+Debe mostrar tu Account ID de 12 dígitos.
+
+---
+
+### Despliegue paso a paso
+
+**IMPORTANTE:** Ejecuta cada comando y espera que termine antes de continuar con el siguiente. Los comandos están en una sola línea para compatibilidad con CMD y PowerShell de Windows.
+
+---
+
+**Stack 1 — VPC (~1 min)**
+
+```bash
+aws cloudformation deploy --template-file infrastructure/cloudformation/01-vpc.yaml --stack-name franquicia-vpc-dev --parameter-overrides Environment=dev
+```
+
+---
+
+**Stack 2 — RDS MySQL (~5 min)**
+
+Reemplaza `TuPasswordSeguro123!` por una contraseña segura y recuérdala para los siguientes pasos.
+
+```bash
+aws cloudformation deploy --template-file infrastructure/cloudformation/02-rds.yaml --stack-name franquicia-rds-dev --parameter-overrides Environment=dev DBPassword=TuPasswordSeguro123!
+```
+
+---
+
+**Obtener endpoint de RDS**
+
+```bash
+aws cloudformation describe-stacks --stack-name franquicia-rds-dev --query "Stacks[0].Outputs[?OutputKey=='RDSEndpoint'].OutputValue" --output text
+```
+
+Copia el valor que aparece (ejemplo: `franquicia-mysql-dev.xxxxxx.us-east-1.rds.amazonaws.com`). Lo necesitas en el siguiente paso.
+
+---
+
+**Stack 3 — Secrets Manager**
+
+Reemplaza `TuPasswordSeguro123!` por la misma contraseña del Stack 2 y `TU-ENDPOINT-RDS` por el valor que copiaste.
+
+```bash
+aws cloudformation deploy --template-file infrastructure/cloudformation/03-secrets.yaml --stack-name franquicia-secrets-dev --parameter-overrides Environment=dev DBPassword=TuPasswordSeguro123! DBHost=TU-ENDPOINT-RDS
+```
+
+---
+
+**Stack 4 — ECR**
+
+```bash
+aws cloudformation deploy --template-file infrastructure/cloudformation/04-ecr.yaml --stack-name franquicia-ecr-dev --parameter-overrides Environment=dev
+```
+
+---
+
+**Obtener Account ID**
+
+```bash
+aws sts get-caller-identity --query Account --output text
+```
+
+Copia el número de 12 dígitos. Lo necesitas en los siguientes pasos.
+
+---
+
+**Login a ECR**
+
+Reemplaza `TU-ACCOUNT-ID` por el número de 12 dígitos.
+
+```bash
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin TU-ACCOUNT-ID.dkr.ecr.us-east-1.amazonaws.com
+```
+
+Debe responder: `Login Succeeded`
+
+---
+
+**Build de la imagen Docker**
+
+```bash
+docker build -t franquicia-api .
+```
+
+---
+
+**Tag de la imagen**
+
+Reemplaza `TU-ACCOUNT-ID` por tu Account ID.
+
+```bash
+docker tag franquicia-api:latest TU-ACCOUNT-ID.dkr.ecr.us-east-1.amazonaws.com/franquicia-api:latest
+```
+
+---
+
+**Push de la imagen a ECR**
+
+Reemplaza `TU-ACCOUNT-ID` por tu Account ID.
+
+```bash
+docker push TU-ACCOUNT-ID.dkr.ecr.us-east-1.amazonaws.com/franquicia-api:latest
+```
+
+---
+
+**Stack 5 — ECS Fargate + ALB (~5 min)**
+
+Reemplaza `TU-ACCOUNT-ID` por tu Account ID.
+
+```bash
+aws cloudformation deploy --template-file infrastructure/cloudformation/05-ecs.yaml --stack-name franquicia-ecs-dev --parameter-overrides Environment=dev ImageUri=TU-ACCOUNT-ID.dkr.ecr.us-east-1.amazonaws.com/franquicia-api:latest --capabilities CAPABILITY_NAMED_IAM
+```
+
+---
+
+**Obtener URL pública**
+
+```bash
+aws elbv2 describe-load-balancers --names franquicia-alb-dev --query "LoadBalancers[0].DNSName" --output text
+```
+
+La API estará disponible en:
+```
+http://TU-ALB-DNS/api/franquicias
+```
+
+**Verificar que está funcionando:**
+```
+GET http://TU-ALB-DNS/actuator/health
+```
+
+Respuesta esperada: `{"status": "UP"}`
+
+---
+
+### Eliminar infraestructura
+
+Ejecuta en orden — espera que cada uno termine antes del siguiente:
+
+```bash
+aws cloudformation delete-stack --stack-name franquicia-ecs-dev
+```
+
+Espera ~3 min, luego:
+
+```bash
+aws cloudformation delete-stack --stack-name franquicia-ecr-dev
+aws cloudformation delete-stack --stack-name franquicia-secrets-dev
+aws cloudformation delete-stack --stack-name franquicia-rds-dev
+aws cloudformation delete-stack --stack-name franquicia-vpc-dev
+```
+
+Eliminar imagen y repositorio ECR:
+
+```bash
+aws ecr delete-repository --repository-name franquicia-api --force
+```
+
+Verificar que todo fue eliminado:
+
+```bash
+aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE --query "StackSummaries[?contains(StackName,'franquicia')].{Name:StackName,Status:StackStatus}" --output table
+```
+
+Si no aparece nada — todo eliminado y sin costos.
 
 ---
 
@@ -203,9 +402,9 @@ docker-compose down -v     # elimina datos también
 http://localhost:8080
 ```
 
-### Base URL AWS (cuando está desplegado)
+### Base URL AWS
 ```
-http://<ALB-DNS-NAME>
+http://TU-ALB-DNS
 ```
 
 ---
@@ -248,49 +447,93 @@ http://<ALB-DNS-NAME>
 
 ### Flujo completo de prueba
 
-```bash
-# 1. Crear franquicia
-curl -X POST http://localhost:8080/api/franquicias \
-  -H "Content-Type: application/json" \
-  -d '{"name": "McDonalds Colombia"}'
+```
+--- CREAR DATOS ---
 
-# 2. Agregar sucursal
-curl -X POST http://localhost:8080/api/franquicias/1/sucursales \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Sucursal Norte"}'
+1.  POST /api/franquicias
+    Body: {"name": "McDonalds Colombia"}
+    → id: 1
 
-# 3. Agregar segunda sucursal
-curl -X POST http://localhost:8080/api/franquicias/1/sucursales \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Sucursal Sur"}'
+2.  POST /api/franquicias/1/sucursales
+    Body: {"name": "Sucursal Norte"}
+    → id: 1
 
-# 4. Agregar producto a sucursal 1
-curl -X POST http://localhost:8080/api/franquicias/sucursales/1/productos \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Big Mac", "stock": 100}'
+3.  POST /api/franquicias/1/sucursales
+    Body: {"name": "Sucursal Sur"}
+    → id: 2
 
-# 5. Agregar producto a sucursal 2
-curl -X POST http://localhost:8080/api/franquicias/sucursales/2/productos \
-  -H "Content-Type: application/json" \
-  -d '{"name": "McNuggets", "stock": 200}'
+4.  POST /api/franquicias/sucursales/1/productos
+    Body: {"name": "Big Mac", "stock": 100}
+    → id: 1
 
-# 6. Modificar stock
-curl -X PATCH "http://localhost:8080/api/franquicias/sucursales/productos/1/stock?stock=150"
+5.  POST /api/franquicias/sucursales/1/productos
+    Body: {"name": "McFlurry", "stock": 50}
+    → id: 2
 
-# 7. Eliminar producto
-curl -X DELETE http://localhost:8080/api/franquicias/sucursales/1/productos/1
+6.  POST /api/franquicias/sucursales/2/productos
+    Body: {"name": "McNuggets", "stock": 200}
+    → id: 3
 
-# 8. Producto con más stock por sucursal
-curl http://localhost:8080/api/franquicias/1/top-productos
+--- CONSULTAR ---
 
-# 9. Actualizar nombre de franquicia
-curl -X PATCH "http://localhost:8080/api/franquicias/1/nombre?nombre=Burger King"
+7.  GET /api/franquicias
+    → lista todas las franquicias
 
-# 10. Actualizar nombre de sucursal
-curl -X PATCH "http://localhost:8080/api/franquicias/sucursales/1/nombre?nombre=Sucursal Centro"
+8.  GET /api/franquicias/1
+    → obtiene franquicia con id 1
 
-# 11. Actualizar nombre de producto
-curl -X PATCH "http://localhost:8080/api/franquicias/sucursales/productos/1/nombre?nombre=Whopper"
+9.  GET /api/franquicias/1/sucursales
+    → lista Sucursal Norte y Sucursal Sur
+
+10. GET /api/franquicias/sucursales/1
+    → obtiene Sucursal Norte
+
+11. GET /api/franquicias/sucursales/1/productos
+    → lista Big Mac y McFlurry
+
+12. GET /api/franquicias/sucursales/productos/1
+    → obtiene Big Mac
+
+--- ACTUALIZAR ---
+
+13. PATCH /api/franquicias/sucursales/productos/1/stock?stock=150
+    → Big Mac stock: 150
+
+14. PATCH /api/franquicias/1/nombre?nombre=Burger King Colombia
+    → nombre de franquicia actualizado
+
+15. PATCH /api/franquicias/sucursales/1/nombre?nombre=Sucursal Centro
+    → nombre de sucursal actualizado
+
+16. PATCH /api/franquicias/sucursales/productos/1/nombre?nombre=Whopper
+    → nombre de producto actualizado
+
+--- CONSULTA ESPECIAL ---
+
+17. GET /api/franquicias/1/top-productos
+    → Whopper (Sucursal Centro, stock 150) y McNuggets (Sucursal Sur, stock 200)
+
+--- ELIMINAR ---
+
+18. DELETE /api/franquicias/sucursales/1/productos/2
+    → 204 No Content (elimina McFlurry)
+
+19. DELETE /api/franquicias/sucursales/2
+    → 204 No Content (elimina Sucursal Sur y sus productos)
+
+20. DELETE /api/franquicias/1
+    → 204 No Content (elimina franquicia con todas sus sucursales y productos)
+
+--- CASOS BORDE ---
+
+21. GET /api/franquicias/999
+    → 404 {"error": "NOT_FOUND", "message": "Franquicia no encontrada con ID: 999"}
+
+22. PATCH /api/franquicias/sucursales/productos/1/stock?stock=-10
+    → 400 {"error": "BAD_REQUEST", "message": "El stock no puede ser negativo"}
+
+23. PATCH /api/franquicias/1/nombre?nombre=
+    → 400 {"error": "BAD_REQUEST", "message": "El nombre no puede estar vacío"}
 ```
 
 ### Respuesta del endpoint top-productos
@@ -307,7 +550,7 @@ curl -X PATCH "http://localhost:8080/api/franquicias/sucursales/productos/1/nomb
   {
     "sucursalId": 2,
     "sucursalName": "Sucursal Sur",
-    "productId": 2,
+    "productId": 3,
     "productName": "McNuggets",
     "stock": 200
   }
@@ -317,8 +560,6 @@ curl -X PATCH "http://localhost:8080/api/franquicias/sucursales/productos/1/nomb
 ---
 
 ## Manejo de errores
-
-Todos los errores se devuelven en formato estándar:
 
 ```json
 {
@@ -338,158 +579,30 @@ Todos los errores se devuelven en formato estándar:
 
 ---
 
-## Despliegue en AWS
-
-### Prerequisitos
-
-```bash
-# Configurar credenciales AWS
-aws configure
-
-# Verificar identidad
-aws sts get-caller-identity
-```
-
-### 1. Desplegar infraestructura con CloudFormation
-
-Los stacks deben desplegarse en orden porque dependen entre sí:
-
-```bash
-# Stack 1 — VPC y red (~1 min)
-aws cloudformation deploy \
-  --template-file infrastructure/cloudformation/01-vpc.yaml \
-  --stack-name franquicia-vpc-dev \
-  --parameter-overrides Environment=dev
-
-# Stack 2 — RDS MySQL (~5 min)
-aws cloudformation deploy \
-  --template-file infrastructure/cloudformation/02-rds.yaml \
-  --stack-name franquicia-rds-dev \
-  --parameter-overrides Environment=dev DBPassword=TuPasswordSeguro123!
-
-# Stack 3 — Obtener endpoint RDS para el secreto
-RDS_ENDPOINT=$(aws cloudformation describe-stacks \
-  --stack-name franquicia-rds-dev \
-  --query "Stacks[0].Outputs[?OutputKey=='RDSEndpoint'].OutputValue" \
-  --output text)
-
-# Stack 3 — Secrets Manager
-aws cloudformation deploy \
-  --template-file infrastructure/cloudformation/03-secrets.yaml \
-  --stack-name franquicia-secrets-dev \
-  --parameter-overrides Environment=dev DBPassword=TuPasswordSeguro123! DBHost=$RDS_ENDPOINT
-
-# Stack 4 — ECR
-aws cloudformation deploy \
-  --template-file infrastructure/cloudformation/04-ecr.yaml \
-  --stack-name franquicia-ecr-dev \
-  --parameter-overrides Environment=dev
-```
-
-### 2. Build y push de imagen a ECR
-
-```bash
-# Obtener ID de cuenta AWS
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-REGION=us-east-1
-
-# Login a ECR
-aws ecr get-login-password --region $REGION | \
-  docker login --username AWS \
-  --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
-
-# Build
-docker build -t franquicia-api .
-
-# Tag
-docker tag franquicia-api:latest \
-  $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/franquicia-api:latest
-
-# Push
-docker push \
-  $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/franquicia-api:latest
-```
-
-### 3. Desplegar ECS Fargate + ALB
-
-```bash
-# Stack 5 — ECS + ALB (~3-5 min)
-aws cloudformation deploy \
-  --template-file infrastructure/cloudformation/05-ecs.yaml \
-  --stack-name franquicia-ecs-dev \
-  --parameter-overrides \
-    Environment=dev \
-    ImageUri=$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/franquicia-api:latest \
-  --capabilities CAPABILITY_NAMED_IAM
-```
-
-### 4. Obtener URL pública
-
-```bash
-aws elbv2 describe-load-balancers \
-  --names franquicia-alb-dev \
-  --query "LoadBalancers[0].DNSName" \
-  --output text
-```
-
-La API estará disponible en:
-```
-http://<ALB-DNS-NAME>/api/franquicias
-```
-
-### 5. Eliminar toda la infraestructura
-
-Para evitar costos, elimina los stacks cuando termines:
-
-```bash
-aws cloudformation delete-stack --stack-name franquicia-ecs-dev
-aws cloudformation delete-stack --stack-name franquicia-ecr-dev
-aws cloudformation delete-stack --stack-name franquicia-secrets-dev
-aws cloudformation delete-stack --stack-name franquicia-rds-dev
-aws cloudformation delete-stack --stack-name franquicia-vpc-dev
-
-# Eliminar imagen de ECR
-aws ecr batch-delete-image \
-  --repository-name franquicia-api \
-  --image-ids imageTag=latest
-```
-
----
-
 ## CI/CD con GitHub Actions
 
 El pipeline se activa automáticamente con cada push a `main`:
 
 ```
-Push a main
-    ↓ Build con Maven
-    ↓ Build imagen Docker
-    ↓ Push a ECR
-    ↓ Deploy en ECS Fargate (zero downtime)
-    ↓ Imprime URL pública
+Push a main → Build Maven → Build Docker → Push ECR → Deploy ECS
 ```
 
-### Configurar secrets en GitHub
-
-Ve a tu repositorio → Settings → Secrets and variables → Actions:
-
-| Secret | Descripción |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | Access key de AWS |
-| `AWS_SECRET_ACCESS_KEY` | Secret key de AWS |
+Secrets requeridos en GitHub → Settings → Secrets:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
 
 ---
 
 ## Decisiones técnicas
 
-- **Spring WebFlux sobre Spring MVC** — modelo no bloqueante con event loop, mayor throughput con menos recursos
-- **R2DBC sobre JPA** — mantiene el modelo reactivo end-to-end sin bloquear hilos en la DB
-- **ECS Fargate sobre EKS** — serverless, sin gestionar nodos, correcto para un único microservicio. EKS añadiría complejidad innecesaria para este caso
+- **Spring WebFlux sobre Spring MVC** — modelo no bloqueante, mayor throughput con menos recursos
+- **R2DBC sobre JPA** — mantiene el modelo reactivo end-to-end sin bloquear hilos
+- **ECS Fargate sobre EKS** — serverless, correcto para un único microservicio
 - **CloudFormation sobre Terraform** — nativo de AWS, sin dependencias externas
-- **MySQL sobre DynamoDB** — los datos tienen relaciones claras (Franquicia → Sucursal → Producto), un modelo relacional es la elección correcta
-- **Secrets Manager para credenciales** — las credenciales de la DB nunca están hardcodeadas en el código ni en variables de entorno del contenedor
-- **Un solo FranquiciaService** — patrón Aggregate DDD, Franquicia es la raíz del agregado. Sucursal y Producto no existen fuera de ese contexto
-- **AwsConfig con detección de ambiente** — misma imagen Docker funciona en local (LocalStack) y en AWS (Secrets Manager real) sin cambios de código
+- **MySQL sobre DynamoDB** — datos con relaciones claras (Franquicia → Sucursal → Producto)
+- **Secrets Manager para credenciales** — credenciales nunca hardcodeadas en el código
+- **Un solo FranquiciaService** — patrón Aggregate DDD, Franquicia es la raíz del agregado
+- **AwsConfig con detección de ambiente** — misma imagen Docker funciona en local y AWS sin cambios
 
 ---
 
