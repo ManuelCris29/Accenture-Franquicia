@@ -41,11 +41,14 @@ CI/CD automatizado con GitHub Actions
 | Framework | Spring Boot 4.0.5 + Spring WebFlux |
 | Base de datos | MySQL 8.4 (local) / RDS MySQL 8.0 (AWS) |
 | Acceso a DB | Spring Data R2DBC (reactivo) |
+| Validación | Jakarta Validation (`@Valid`, `@NotBlank`, `@Min`) |
+| Documentación | SpringDoc OpenAPI + Swagger UI |
 | Contenedorización | Docker multistage |
 | Nube | AWS (ECS Fargate, RDS, ECR, ALB, Secrets Manager) |
 | IaC | CloudFormation (5 stacks) |
 | CI/CD | GitHub Actions |
 | Simulación local | LocalStack 3.0 |
+| Tests | JUnit 5 + Mockito + StepVerifier (41 pruebas unitarias) |
 
 ---
 
@@ -350,7 +353,7 @@ aws elbv2 describe-load-balancers --names franquicia-alb-dev --query "LoadBalanc
 
 La API estará disponible en:
 ```
-http://TU-ALB-DNS/api/franquicias
+http://TU-ALB-DNS/api/v1/franquicias
 ```
 
 **Verificar que está funcionando:**
@@ -413,33 +416,33 @@ http://TU-ALB-DNS
 
 | Método | URL | Descripción | Criterio |
 |--------|-----|-------------|----------|
-| `POST` | `/api/franquicias` | Agregar franquicia | Obligatorio |
-| `GET` | `/api/franquicias` | Listar todas | - |
-| `GET` | `/api/franquicias/{id}` | Obtener por id | - |
-| `PATCH` | `/api/franquicias/{id}/nombre?nombre=NuevoNombre` | Actualizar nombre | Plus |
-| `DELETE` | `/api/franquicias/{id}` | Eliminar franquicia | - |
-| `GET` | `/api/franquicias/{id}/top-productos` | Producto con más stock por sucursal | Obligatorio |
+| `POST` | `/api/v1/franquicias` | Agregar franquicia | Obligatorio |
+| `GET` | `/api/v1/franquicias` | Listar todas | - |
+| `GET` | `/api/v1/franquicias/{id}` | Obtener por id | - |
+| `PATCH` | `/api/v1/franquicias/{id}/nombre?nombre=NuevoNombre` | Actualizar nombre | Plus |
+| `DELETE` | `/api/v1/franquicias/{id}` | Eliminar franquicia | - |
+| `GET` | `/api/v1/franquicias/{id}/top-productos` | Producto con más stock por sucursal | Obligatorio |
 
 ### Sucursales
 
 | Método | URL | Descripción | Criterio |
 |--------|-----|-------------|----------|
-| `POST` | `/api/franquicias/{franquiciaId}/sucursales` | Agregar sucursal | Obligatorio |
-| `GET` | `/api/franquicias/{franquiciaId}/sucursales` | Listar por franquicia | - |
-| `GET` | `/api/franquicias/sucursales/{id}` | Obtener por id | - |
-| `PATCH` | `/api/franquicias/sucursales/{id}/nombre?nombre=NuevoNombre` | Actualizar nombre | Plus |
-| `DELETE` | `/api/franquicias/sucursales/{id}` | Eliminar sucursal | - |
+| `POST` | `/api/v1/franquicias/{franquiciaId}/sucursales` | Agregar sucursal | Obligatorio |
+| `GET` | `/api/v1/franquicias/{franquiciaId}/sucursales` | Listar por franquicia | - |
+| `GET` | `/api/v1/franquicias/sucursales/{id}` | Obtener por id | - |
+| `PATCH` | `/api/v1/franquicias/sucursales/{id}/nombre?nombre=NuevoNombre` | Actualizar nombre | Plus |
+| `DELETE` | `/api/v1/franquicias/sucursales/{id}` | Eliminar sucursal | - |
 
 ### Productos
 
 | Método | URL | Descripción | Criterio |
 |--------|-----|-------------|----------|
-| `POST` | `/api/franquicias/sucursales/{sucursalId}/productos` | Agregar producto | Obligatorio |
-| `GET` | `/api/franquicias/sucursales/{sucursalId}/productos` | Listar por sucursal | - |
-| `GET` | `/api/franquicias/sucursales/productos/{id}` | Obtener por id | - |
-| `DELETE` | `/api/franquicias/sucursales/{sucursalId}/productos/{productoId}` | Eliminar producto | Obligatorio |
-| `PATCH` | `/api/franquicias/sucursales/productos/{id}/stock?stock=150` | Modificar stock | Obligatorio |
-| `PATCH` | `/api/franquicias/sucursales/productos/{id}/nombre?nombre=NuevoNombre` | Actualizar nombre | Plus |
+| `POST` | `/api/v1/franquicias/sucursales/{sucursalId}/productos` | Agregar producto | Obligatorio |
+| `GET` | `/api/v1/franquicias/sucursales/{sucursalId}/productos` | Listar por sucursal | - |
+| `GET` | `/api/v1/franquicias/sucursales/productos/{id}` | Obtener por id | - |
+| `DELETE` | `/api/v1/franquicias/sucursales/{sucursalId}/productos/{productoId}` | Eliminar producto | Obligatorio |
+| `PATCH` | `/api/v1/franquicias/sucursales/productos/{id}/stock?stock=150` | Modificar stock | Obligatorio |
+| `PATCH` | `/api/v1/franquicias/sucursales/productos/{id}/nombre?nombre=NuevoNombre` | Actualizar nombre | Plus |
 
 ---
 
@@ -450,89 +453,89 @@ http://TU-ALB-DNS
 ```
 --- CREAR DATOS ---
 
-1.  POST /api/franquicias
+1.  POST /api/v1/franquicias
     Body: {"name": "McDonalds Colombia"}
     → id: 1
 
-2.  POST /api/franquicias/1/sucursales
+2.  POST /api/v1/franquicias/1/sucursales
     Body: {"name": "Sucursal Norte"}
     → id: 1
 
-3.  POST /api/franquicias/1/sucursales
+3.  POST /api/v1/franquicias/1/sucursales
     Body: {"name": "Sucursal Sur"}
     → id: 2
 
-4.  POST /api/franquicias/sucursales/1/productos
+4.  POST /api/v1/franquicias/sucursales/1/productos
     Body: {"name": "Big Mac", "stock": 100}
     → id: 1
 
-5.  POST /api/franquicias/sucursales/1/productos
+5.  POST /api/v1/franquicias/sucursales/1/productos
     Body: {"name": "McFlurry", "stock": 50}
     → id: 2
 
-6.  POST /api/franquicias/sucursales/2/productos
+6.  POST /api/v1/franquicias/sucursales/2/productos
     Body: {"name": "McNuggets", "stock": 200}
     → id: 3
 
 --- CONSULTAR ---
 
-7.  GET /api/franquicias
+7.  GET /api/v1/franquicias
     → lista todas las franquicias
 
-8.  GET /api/franquicias/1
+8.  GET /api/v1/franquicias/1
     → obtiene franquicia con id 1
 
-9.  GET /api/franquicias/1/sucursales
+9.  GET /api/v1/franquicias/1/sucursales
     → lista Sucursal Norte y Sucursal Sur
 
-10. GET /api/franquicias/sucursales/1
+10. GET /api/v1/franquicias/sucursales/1
     → obtiene Sucursal Norte
 
-11. GET /api/franquicias/sucursales/1/productos
+11. GET /api/v1/franquicias/sucursales/1/productos
     → lista Big Mac y McFlurry
 
-12. GET /api/franquicias/sucursales/productos/1
+12. GET /api/v1/franquicias/sucursales/productos/1
     → obtiene Big Mac
 
 --- ACTUALIZAR ---
 
-13. PATCH /api/franquicias/sucursales/productos/1/stock?stock=150
+13. PATCH /api/v1/franquicias/sucursales/productos/1/stock?stock=150
     → Big Mac stock: 150
 
-14. PATCH /api/franquicias/1/nombre?nombre=Burger King Colombia
+14. PATCH /api/v1/franquicias/1/nombre?nombre=Burger King Colombia
     → nombre de franquicia actualizado
 
-15. PATCH /api/franquicias/sucursales/1/nombre?nombre=Sucursal Centro
+15. PATCH /api/v1/franquicias/sucursales/1/nombre?nombre=Sucursal Centro
     → nombre de sucursal actualizado
 
-16. PATCH /api/franquicias/sucursales/productos/1/nombre?nombre=Whopper
+16. PATCH /api/v1/franquicias/sucursales/productos/1/nombre?nombre=Whopper
     → nombre de producto actualizado
 
 --- CONSULTA ESPECIAL ---
 
-17. GET /api/franquicias/1/top-productos
+17. GET /api/v1/franquicias/1/top-productos
     → Whopper (Sucursal Centro, stock 150) y McNuggets (Sucursal Sur, stock 200)
 
 --- ELIMINAR ---
 
-18. DELETE /api/franquicias/sucursales/1/productos/2
+18. DELETE /api/v1/franquicias/sucursales/1/productos/2
     → 204 No Content (elimina McFlurry)
 
-19. DELETE /api/franquicias/sucursales/2
+19. DELETE /api/v1/franquicias/sucursales/2
     → 204 No Content (elimina Sucursal Sur y sus productos)
 
-20. DELETE /api/franquicias/1
+20. DELETE /api/v1/franquicias/1
     → 204 No Content (elimina franquicia con todas sus sucursales y productos)
 
 --- CASOS BORDE ---
 
-21. GET /api/franquicias/999
+21. GET /api/v1/franquicias/999
     → 404 {"error": "NOT_FOUND", "message": "Franquicia no encontrada con ID: 999"}
 
-22. PATCH /api/franquicias/sucursales/productos/1/stock?stock=-10
+22. PATCH /api/v1/franquicias/sucursales/productos/1/stock?stock=-10
     → 400 {"error": "BAD_REQUEST", "message": "El stock no puede ser negativo"}
 
-23. PATCH /api/franquicias/1/nombre?nombre=
+23. PATCH /api/v1/franquicias/1/nombre?nombre=
     → 400 {"error": "BAD_REQUEST", "message": "El nombre no puede estar vacío"}
 ```
 
